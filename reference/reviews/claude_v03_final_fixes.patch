@@ -1,0 +1,23 @@
+--- a/R/fit_one.R	2026-11-02 12:05:48.000000000 +0000
++++ b/R/fit_one.R	2026-11-03 00:15:09.401860622 +0000
+@@ -234,7 +234,8 @@
+     family_fs <- pilot$finesample_by_model[[family]] %||% pilot$finesample
+     if(!is.numeric(family_fs) || length(family_fs)!=1L ||
+        !family_fs %in% c(1L,3L,5L,7L,9L)) stop('Unverified family fine-sampling')
+-    psf_mode <- bd_setup_profit_psf(spec,ip$observed,family,as.integer(family_fs))
++    psf_obs <- ip$observed; psf_obs$psf <- built$input$psf   # use the normalised, hash-checked PSF
++    psf_mode <- bd_setup_profit_psf(spec,psf_obs,family,as.integer(family_fs))
+     spec <- psf_mode$spec
+     dat <- do.call(ProFit::profitSetupData,c(list(image=z,region=region,sigma=built$input$sigma,
+        segim=built$input$segim,mask=built$input$mask,
+--- a/tests/test_synthetic_recovery.R	2026-11-02 12:03:06.000000000 +0000
++++ b/tests/test_synthetic_recovery.R	2026-11-03 00:15:09.402031389 +0000
+@@ -34,7 +34,7 @@
+ mask <- matrix(FALSE,d[1],d[2]);
+ built <- bd_build_inputs(L,labels$A_g,image,sky$sigma,mask,psf,3,step0)
+ bd_assert_inputs_unchanged(built,L,image,sky$sigma,mask)
+-ipt <- list(built=built,observed=list(L=L,image=image,detector_mask=mask,
++ipt <- list(built=built,observed=list(L=L,image=image,psf=psf,detector_mask=mask,
+   source_hashes=list(image='SYNTHETIC')),sky=sky)
+ pilot <- list(models=c('S','P','D_FIXED4','BD_FREE_N'),
+   magzero=23.9,finesample=1L,seeds=list(109L),optim_maxit=500L,

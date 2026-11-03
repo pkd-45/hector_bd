@@ -1,0 +1,43 @@
+# Pilot stays BLOCKED until ten additional stratified IDs are frozen from R61.
+run_id: pilot_20261031
+models: [S, P, D_FIXED4, BD_FREE_N]
+magzero: 23.9
+finesample: 3
+# FAMILY-SPECIFIC PROPOSALS ONLY; unapproved until F2 synthetic and per-object PSF checks.
+finesample_by_model:
+  S: 3
+  P: 1
+  D_FIXED4: 3
+  BD_FREE_N: 3
+seeds: [101, 211, 307]
+optim_maxit: 350
+known_10:
+  - W42710765002459
+  - W221990044410325
+  - W351690654304280
+  - W176980350403709
+  - W12690079611187
+  - W41691060304604
+  - W350680203312123
+  - W18680557409852
+  - W49710254502112
+  - W213991001205426
+galaxy_ids:
+  - W42710765002459
+  - W221990044410325
+  - W351690654304280
+  - W176980350403709
+  - W12690079611187
+  - W41691060304604
+  - W350680203312123
+  - W18680557409852
+  - W49710254502112
+  - W213991001205426
+frozen_roster_required: R61_832_ONLY
+frozen_roster_sha256: ''
+pilot_approved: false
+psf_g5_approved: false
+per_object_psf_gate_index: config/psf_g4_pilot.tsv
+models_g6_approved: false
+pilot_review_completed: false
+full_832_approved: false

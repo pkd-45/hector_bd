@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "${env:CONDA_PREFIX}/bin/python",
+  "r.rterm.mac": "/usr/local/bin/R",
+  "r.rterm.linux": "${env:CONDA_PREFIX}/bin/R",
+  "r.lsp.path": "R",
+  "jupyter.notebookFileRoot": "${workspaceFolder}",
+  "jupyter.kernels.filter": []
+}

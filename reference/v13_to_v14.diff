@@ -1,0 +1,181 @@
+--- TRACK_B_V01/reference/profuse_psf_v13.R	2026-10-30 23:25:00.904770550 +0000
++++ TRACK_B_V01/src/profuse_psf_v14.R	2026-10-30 23:25:02.163655116 +0000
+@@ -1,3 +1,4 @@
++# v14 generated from byte-verified historical v13. Synthetic-only review candidate.
+ ## ============================================================================
+ ##  files/profuse_psf_v13.R
+ ##
+@@ -213,6 +214,26 @@
+ ##  the log of x (for scale parameters).  Returns a logical mask of the
+ ##  KEPT entries (same length as x).
+ ## ----------------------------------------------------------------------------
++# v14: PA is axial (period 180 degrees), so +/-89 degrees are adjacent.
++.v14_axial_pa_clip <- function(x, sigma=2, max_iter=5) {
++  ok <- is.finite(x)
++  if (sum(ok)<3L) return(ok)
++  ang <- x[ok]*pi/90  # doubled PA, radians
++  keep <- rep(TRUE,length(ang))
++  for (it in seq_len(max_iter)) {
++    center <- atan2(stats::median(sin(ang[keep])),
++                    stats::median(cos(ang[keep])))
++    residual <- atan2(sin(ang-center), cos(ang-center))/2
++    spread <- stats::mad(residual[keep])
++    if (!is.finite(spread) || spread<=0) break
++    nxt <- abs(residual) < sigma*spread
++    if (identical(nxt,keep)) break
++    keep <- nxt
++    if (sum(keep)<3L) break
++  }
++  out <- ok;out[which(ok)] <- keep;out
++}
++
+ .iter_2sig_clip <- function(x, in_log = FALSE, sigma = 2, max_iter = 5) {
+   ok <- is.finite(x)
+   if (in_log) ok <- ok & x > 0
+@@ -220,7 +241,7 @@
+   v <- if (in_log) log(x[ok]) else x[ok]
+   keep <- rep(TRUE, length(v))
+   for (it in seq_len(max_iter)) {
+-    m <- stats::median(v[keep]); s <- stats::mad(v[keep]) * 1.4826
++    m <- stats::median(v[keep]); s <- stats::mad(v[keep])
+     if (!is.finite(s) || s == 0) break
+     new_keep <- abs(v - m) < sigma * s
+     if (identical(new_keep, keep)) break
+@@ -447,9 +468,9 @@
+   } else {
+     sky_pix2 <- as.numeric(data_stamp[seg_stamp == 0L])
+     sigma_pix <- if (length(sky_pix2) >= 8L) {
+-      stats::mad(sky_pix2, na.rm = TRUE) * 1.4826
++      stats::mad(sky_pix2, na.rm = TRUE)
+     } else {
+-      stats::mad(as.numeric(data_stamp), na.rm = TRUE) * 1.4826
++      stats::mad(as.numeric(data_stamp), na.rm = TRUE)
+     }
+   }
+   if (!is.finite(sigma_pix) || sigma_pix <= 0) sigma_pix <- 1
+@@ -716,9 +737,9 @@
+   } else {
+     sky_pix2 <- as.numeric(data_stamp[seg_stamp == 0L])
+     sigma_pix <- if (length(sky_pix2) >= 8L) {
+-      stats::mad(sky_pix2, na.rm = TRUE) * 1.4826
++      stats::mad(sky_pix2, na.rm = TRUE)
+     } else {
+-      stats::mad(as.numeric(data_stamp), na.rm = TRUE) * 1.4826
++      stats::mad(as.numeric(data_stamp), na.rm = TRUE)
+     }
+   }
+   if (!is.finite(sigma_pix) || sigma_pix <= 0) sigma_pix <- 1
+@@ -960,7 +981,7 @@
+     keep <- keep & .iter_2sig_clip(fwhms, in_log = TRUE)
+     keep <- keep & .iter_2sig_clip(conms, in_log = TRUE)
+     keep <- keep & .iter_2sig_clip(axrs,  in_log = TRUE)
+-    keep <- keep & .iter_2sig_clip(angs,  in_log = FALSE)
++    keep <- keep & .v14_axial_pa_clip(angs)
+     keep <- keep & .iter_2sig_clip(bgs,   in_log = FALSE)
+     n_clipped <- sum(s & !keep)
+     s <- keep
+@@ -1030,7 +1051,7 @@
+     keep <- keep & .iter_2sig_clip(fwhms, in_log = TRUE)
+     keep <- keep & .iter_2sig_clip(conms, in_log = TRUE)
+     keep <- keep & .iter_2sig_clip(axrs,  in_log = TRUE)
+-    keep <- keep & .iter_2sig_clip(angs,  in_log = FALSE)
++    keep <- keep & .v14_axial_pa_clip(angs)
+     n_clipped <- sum(s & !keep)
+     s <- keep
+     if (verbose && n_clipped > 0L)
+@@ -1103,6 +1124,31 @@
+ ##  Returns a Moffat PSF with sum=1, corners zeroed, attrs (fwhm, beta,
+ ##  axrat, ang, Nstar_used, fwhm_arcsec).
+ ## ----------------------------------------------------------------------------
++# v14: approximate encircled fraction for an elliptical Moffat in a circular
++# aperture; midpoint angular quadrature of the analytic radial integral.
++# This must be labelled ANALYTIC_APPROX, never mistaken for measured star flux.
++.v14_moffat_circle_ee <- function(fwhm,beta,q,diameter,nang=720L) {
++  if (!all(is.finite(c(fwhm,beta,q,diameter))) || fwhm<=0 || beta<=1 ||
++      q<=0 || q>1 || diameter<1) return(NA_real_)
++  alpha <- (fwhm/2)/sqrt(2^(1/beta)-1)
++  theta <- 2*pi*((seq_len(nang)-0.5)/nang)
++  v <- cos(theta)^2 + (sin(theta)/q)^2
++  tail <- mean((1/v)*(1 + v*(diameter/2/alpha)^2)^(1-beta))/q
++  pmax(0,pmin(1,1-tail))
++}
++.v14_annotate_ee <- function(psf,fwhm,beta,q,min_fraction=0.99) {
++  if (is.null(psf)) return(NULL)
++  fraction <- .v14_moffat_circle_ee(fwhm,beta,q,min(dim(psf)))
++  attr(psf,'ee_infinite_moffat_approx') <- fraction
++  attr(psf,'ee_method') <- 'ELLIPTICAL_MOFFAT_ANALYTIC_CIRCULAR_APERTURE_720_ANGLES_APPROX'
++  attr(psf,'ee_lost_fraction_approx') <- if (is.finite(fraction)) 1-fraction else NA_real_
++  attr(psf,'ee_below_99pct') <- !is.finite(fraction) || fraction<min_fraction
++  attr(psf,'ee_decision') <- if (!is.finite(fraction)) 'UNRESOLVED'
++      else if (fraction<min_fraction) 'LOSS_RECORDED_NOT_SILENT'
++      else '>=99_PERCENT_APPROX'
++  psf
++}
++
+ .build_median_param_psf <- function(selected_fits,
+                                     target_flux_frac = 0.99,
+                                     max_dim = 151L,
+@@ -1139,6 +1185,7 @@
+   psf <- .render_moffat(fwhm = fwhm_med, con = con_med, axrat = axr_med,
+                         ang = ang_med, dim = c(d_use, d_use))
+   psf <- .zero_corners(psf)
++  psf <- .v14_annotate_ee(psf, fwhm_med, con_med, axr_med)
+ 
+   attr(psf, "fwhm")  <- fwhm_med
+   attr(psf, "beta")  <- con_med
+@@ -1168,6 +1215,7 @@
+   psf <- .render_moffat(fwhm = default_fwhm_px, con = default_con,
+                         axrat = 1, ang = 0, dim = c(d, d))
+   psf <- .zero_corners(psf)
++  psf <- .v14_annotate_ee(psf, default_fwhm_px, default_con, 1)
+   attr(psf, "fwhm")  <- default_fwhm_px
+   attr(psf, "beta")  <- default_con
+   attr(psf, "axrat") <- 1
+@@ -1581,6 +1629,12 @@
+                       else if (identical(recommended, psf_e)  && !is.null(psf_e))      "empirical"
+                       else if (identical(recommended, psf_apod) && !is.null(psf_apod)) "apodized"
+                       else                                                              "default"
++  if (is.null(attr(recommended, 'ee_decision'))) {
++    attr(recommended, 'ee_infinite_moffat_approx') <- NA_real_
++    attr(recommended, 'ee_lost_fraction_approx') <- NA_real_
++    attr(recommended, 'ee_method') <- 'NONANALYTIC_PSF_EE_UNMEASURED'
++    attr(recommended, 'ee_decision') <- 'BLOCKED_MEASURE_PSF_EE_BEFORE_PILOT'
++  }
+   if (verbose)
+     message(sprintf(
+       "[psf-v11] output=%s | gama=%s | empirical=%s | default FWHM=%.3fpx (con=%.2f) | flag=%d",
+@@ -1694,6 +1748,10 @@
+     psf_apodized           = psf_apod,
+     stack_moffat           = stack_mof,
+     output_kind            = output_kind_used,
++    ee_infinite_moffat_approx = attr(recommended, 'ee_infinite_moffat_approx'),
++    ee_lost_fraction_approx = attr(recommended, 'ee_lost_fraction_approx'),
++    ee_method = attr(recommended, 'ee_method'),
++    ee_decision = attr(recommended, 'ee_decision'),
+     profound               = pf,
+     candidates             = cand,
+     fits                   = fits,
+@@ -2121,6 +2179,12 @@
+                       else if (identical(recommended, psf_e)  && !is.null(psf_e))      "empirical"
+                       else if (identical(recommended, psf_apod) && !is.null(psf_apod)) "apodized"
+                       else                                                              "default"
++  if (is.null(attr(recommended, 'ee_decision'))) {
++    attr(recommended, 'ee_infinite_moffat_approx') <- NA_real_
++    attr(recommended, 'ee_lost_fraction_approx') <- NA_real_
++    attr(recommended, 'ee_method') <- 'NONANALYTIC_PSF_EE_UNMEASURED'
++    attr(recommended, 'ee_decision') <- 'BLOCKED_MEASURE_PSF_EE_BEFORE_PILOT'
++  }
+   if (verbose)
+     message(sprintf(
+       "[psf-v13] output=%s | gama=%s | empirical=%s | default FWHM=%.3fpx (con=%.2f) | flag=%d | optim=%s | Nsegstats=%d",
+@@ -2256,6 +2320,10 @@
+     psf_apodized           = psf_apod,
+     stack_moffat           = stack_mof,
+     output_kind            = output_kind_used,
++    ee_infinite_moffat_approx = attr(recommended, 'ee_infinite_moffat_approx'),
++    ee_lost_fraction_approx = attr(recommended, 'ee_lost_fraction_approx'),
++    ee_method = attr(recommended, 'ee_method'),
++    ee_decision = attr(recommended, 'ee_decision'),
+     profound               = pf,
+     candidates             = cand,
+     fits                   = fits,

@@ -1,0 +1,8 @@
+# /data is the known protected root; specific subdirectories come from the index.
+data_root: /data
+historical_output_root: /data
+data_roots:
+  - /data
+  - /scratch
+input_index: config/verified_path_index.tsv
+output_root: outputs

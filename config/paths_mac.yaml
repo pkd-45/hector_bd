@@ -1,0 +1,7 @@
+# These are data roots from historical conversations, not verified locations.
+data_root: /Volumes/waves/WAVES
+historical_output_root: /Volumes/waves/WAVES_output
+data_roots:
+  - /Volumes/waves
+input_index: config/verified_path_index.tsv
+output_root: outputs

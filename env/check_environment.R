@@ -1,0 +1,10 @@
+#!/usr/bin/env Rscript
+source(file.path('R','00_load_all.R'))
+root<-bd_find_root();.libPaths(c(file.path(root,'env','restart_Rlib'),.libPaths()))
+bd_load_all(root)
+cfg<-bd_config('friday',root)
+cat('R:',R.version.string,'\n')
+cat('Libpaths:',paste(.libPaths(),collapse=' | '),'\n')
+print(bd_fingerprint(cfg))
+cat('Git commit:',tryCatch(system('git rev-parse HEAD',intern=TRUE),error=function(e)'NOT_A_GIT_REPO'),'\n')
+cat('Kernel:',Sys.getenv('CONDA_DEFAULT_ENV',unset='UNSET'),'\n')

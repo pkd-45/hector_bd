@@ -1,0 +1,32 @@
+# Reported history is NOT a source-file verification.
+project: Hector/WAVES original-segment bulge-disc restart
+product: as_delivered_unclassified
+source: inputs.rds$segmap_path
+bands: [r]
+image_shape_reported: [1333, 1333]
+pixel_scale_arcsec_reported: 0.30
+image_units_reported: microJy
+magzero_reported: 23.9
+upstream_sky_reported: subtracted
+sky_policy: fixed_measured
+noise_policy: original_L0_MAD_plus_model_poisson
+historical_gain_bug_reported: 1
+effective_gain:
+  value: 687.0
+  status: REPORTED
+segmentation_subtype_blocking: false
+mapping_policy: exact_WCS_centre_pixel_flag_3x3_boundary_stop_on_sky
+catalogue_group_membership: verified_group_only
+# Every evidence field is deliberately unverified until Friday byte evidence.
+evidence:
+  science_image: {status: REPORTED, sha256: ''}
+  original_segmentation: {status: REPORTED, sha256: ''}
+  wcs_alignment: {status: REPORTED, sha256: ''}
+  units_zeropoint: {status: REPORTED, sha256: ''}
+  upstream_sky: {status: REPORTED, sha256: ''}
+  gain_calibration: {status: REPORTED, sha256: ''}
+  noise_protocol: {status: REPORTED, sha256: ''}
+  catalogue_label_mapping: {status: REPORTED, sha256: ''}
+
+# Phase-C-only sky exclusion radius; DOES NOT change original WAVES segmentation.
+sky_mask_radius_px: 10

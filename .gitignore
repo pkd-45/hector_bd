@@ -1,0 +1,18 @@
+# Never add science data, outputs, historical R libraries, notebook checkpoints
+outputs/
+data/
+env/restart_Rlib/
+.ipynb_checkpoints/
+*.fits
+*.fits.gz
+*.rds
+*.RData
+*.tar
+*.tar.gz
+*.log
+.DS_Store
+config/verified_path_index.tsv
+__pycache__/
+*.pyc
+
+Rplots.pdf

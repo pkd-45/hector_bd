@@ -1,0 +1,5 @@
+source(file.path('R','00_load_all.R'));bd_load_all()
+result<-run_renderer_tests()
+for(n in names(result)) cat(n,result[[n]]$status,result[[n]]$detail,'\n')
+if(!all(vapply(result,function(x)identical(x$status,'PASS'),logical(1))))
+ stop('G4 BLOCKED: F1-F9 did not all pass')

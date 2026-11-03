@@ -1,0 +1,37 @@
+# SHA-1 of the exact Git source commits, verified against GitHub on 2026-10-31.
+packages:
+  ProFit:
+    repo: ICRAR/ProFit
+    sha: 2dca6ebb6b1a47ecf6ac0cb955424fc680c8bdf7
+    version: 2.8.2
+  ProFound:
+    repo: asgr/ProFound
+    sha: 1d56e383159606b7df9e81dcac2bf6e0051558ec
+    version: 1.35.0
+  Highlander:
+    repo: asgr/Highlander
+    sha: a44df8d00555ded4c14fef80d43ed68aff3b284c
+  LaplacesDemon:
+    repo: asgr/LaplacesDemon
+    sha: 863be268df060c92fce8d37a86384c71c92d2506
+  Rfits:
+    repo: asgr/Rfits
+    sha: 9c951ff7adbca465d251d05c00e9bd72005554df
+  Rwcs:
+    repo: asgr/Rwcs
+    sha: a471979182d0d3ecf94ea49fc0e92e792bc8bd83
+  digest:
+    repo: cran/digest
+    sha: 8421381e335e5e0f426cc11068faac43806bc035
+  magicaxis:
+    repo: asgr/magicaxis
+    sha: 0ceb832a621222545b83734a6ab7a7dbaf8a6222
+  celestial:
+    repo: asgr/celestial
+    sha: 440171745d03dca66d03343d388056e630421a2d
+  ParmOff:
+    repo: asgr/ParmOff
+    sha: 31273706baf080cc46480a4f660eef9228f9cd03
+  cmaeshpc:
+    repo: asgr/cmaeshpc
+    sha: 89a75104c9d1c7e0272b24497a05ad36ecf4da2b
