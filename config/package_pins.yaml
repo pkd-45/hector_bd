@@ -35,3 +35,20 @@ packages:
   cmaeshpc:
     repo: asgr/cmaeshpc
     sha: 89a75104c9d1c7e0272b24497a05ad36ecf4da2b
+cran_runtime:
+  backports: 1.5.1
+  checkmate: 2.3.4
+  foreach: 1.5.2
+  iterators: 1.0.14
+  doParallel: 1.0.17
+  data.table: 1.18.6.1
+  numDeriv: 2016.8.1.1
+  cubature: 2.1.4.1
+  matrixStats: 1.5.0
+  RANN: 2.6.3
+  NISTunits: 1.0.1
+  pracma: 2.4.6
+  plotrix: 3.8.14
+  sm: 2.2.6.0
+  maps: 3.4.4
+  mapproj: 1.2.12

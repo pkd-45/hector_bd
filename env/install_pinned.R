@@ -3,7 +3,8 @@
 source(file.path('R','00_load_all.R'))
 root<-bd_find_root()
 if(!requireNamespace('yaml',quietly=TRUE)) stop('Make yaml available to the active R; it reads the lock file')
-pins<-yaml::read_yaml(file.path(root,'config','package_pins.yaml'))$packages
+lock<-yaml::read_yaml(file.path(root,'config','package_pins.yaml'))
+pins<-lock$packages
 lib<-file.path(root,'env','restart_Rlib')
 if(file.exists(lib) && nzchar(Sys.readlink(lib))) stop('Refusing symlinked restart Rlib')
 dir.create(lib,showWarnings=FALSE,recursive=TRUE)
@@ -13,16 +14,26 @@ if(any(normalizePath(.libPaths(),mustWork=FALSE)==normalizePath(lib,mustWork=TRU
 # These are CRAN runtime dependencies of the pinned source packages. Keep them
 # in the restart library so it remains usable when no historical library is
 # inherited by a notebook kernel.
-cran_dependencies<-c('backports','checkmate','foreach','iterators','doParallel',
-                      'data.table','numDeriv','cubature','matrixStats','RANN',
-                      'NISTunits','pracma','plotrix','sm','maps','mapproj')
+cran_pins<-lock$cran_runtime
+if(!is.list(cran_pins) || !length(cran_pins))
+  stop('CRAN runtime versions missing from package lock')
+cran_dependencies<-names(cran_pins)
 missing_dependencies<-cran_dependencies[
   !vapply(cran_dependencies,
           function(package) nzchar(system.file(package=package,lib.loc=lib)),
           logical(1))]
 if(length(missing_dependencies)) {
-  install.packages(missing_dependencies,lib=lib,
-                   repos='https://cloud.r-project.org',dependencies=TRUE)
+  if(requireNamespace('remotes',quietly=TRUE)) {
+    for(package in missing_dependencies)
+      remotes::install_version(package,version=as.character(cran_pins[[package]]),
+                               lib=lib,repos='https://cloud.r-project.org',
+                               dependencies=c('Depends','Imports','LinkingTo'),
+                               upgrade='never')
+  } else {
+    install.packages(missing_dependencies,lib=lib,
+                     repos='https://cloud.r-project.org',
+                     dependencies=c('Depends','Imports','LinkingTo'))
+  }
 }
 still_missing<-cran_dependencies[
   !vapply(cran_dependencies,function(package)
@@ -31,6 +42,14 @@ still_missing<-cran_dependencies[
 if(length(still_missing))
   stop('Missing restart-library dependencies after installation: ',
        paste(still_missing,collapse=', '))
+wrong_versions<-cran_dependencies[vapply(cran_dependencies,function(package)
+  as.character(utils::packageVersion(package,lib.loc=lib)) !=
+    as.character(cran_pins[[package]]),logical(1))]
+if(length(wrong_versions))
+  stop('CRAN runtime version mismatch: ',
+       paste(vapply(wrong_versions,function(package)
+         paste0(package,'=',utils::packageVersion(package,lib.loc=lib),
+               ' expected ',cran_pins[[package]]),character(1)),collapse=', '))
 # Install dependencies before consumers, without fetching unpinned Git remotes.
 install_order<-c('ParmOff','celestial','magicaxis','LaplacesDemon','cmaeshpc',
                  'digest','Rfits','Rwcs','Highlander','ProFit','ProFound')

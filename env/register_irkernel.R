@@ -20,11 +20,14 @@ resource_dir<-kernels$kernels[[name]]$resource_dir
 if(is.null(resource_dir) || !nzchar(resource_dir)) stop('Registered kernelspec not found: ',name)
 spec_file<-file.path(resource_dir,'kernel.json')
 spec<-jsonlite::fromJSON(spec_file,simplifyVector=FALSE)
+if(is.null(spec$env)) spec$env<-list()
 existing<-strsplit(Sys.getenv('R_LIBS_USER'),.Platform$path.sep,fixed=TRUE)[[1]]
 spec$env$R_LIBS_USER<-paste(unique(c(lib,existing[nzchar(existing)])),collapse=.Platform$path.sep)
-spec$argv<-c(spec$argv[1:2],
-             '-e',
-             paste0('.libPaths(c(',dQuote(lib),',.libPaths()));IRkernel::main()'),
-             spec$argv[(match('-e',spec$argv)+2):length(spec$argv)])
+e_idx<-match('-e',spec$argv)
+if(is.na(e_idx) || e_idx==length(spec$argv))
+  stop('Registered kernelspec has no executable -e argument')
+spec$argv[[e_idx+1]]<-paste0(
+  '.libPaths(c(',encodeString(lib,quote='"'),',.libPaths()));',
+  spec$argv[[e_idx+1]])
 jsonlite::write_json(spec,spec_file,auto_unbox=TRUE,pretty=TRUE)
 cat('Registered ',name,' with R_LIBS_USER=',spec$env$R_LIBS_USER,'\n',sep='')

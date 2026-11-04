@@ -50,7 +50,7 @@ bash tests/run_checks.sh
 code .
 ```
 
-Run `which Rscript` to confirm native `/usr/local/bin/Rscript` is selected. The historical library already supplies `yaml` and `remotes`; the installer adds the exact pins in dependency order and provisions their CRAN runtime dependencies into `env/restart_Rlib`. The IRkernel command adds missing notebook tooling there as well. Launch VS Code from this shell so it inherits `R_LIBS_USER`.
+Run `which Rscript` to confirm native `/usr/local/bin/Rscript` is selected. The historical library already supplies `yaml` and `remotes`; the installer adds the exact Git pins in dependency order and provisions the version-locked CRAN runtime dependencies into `env/restart_Rlib`. The IRkernel command adds missing notebook tooling there as well. Launch VS Code from this shell so it inherits `R_LIBS_USER`.
 
 The kernel ID `waves_r_bd` is retained for notebook compatibility and is registered against the R that runs `env/register_irkernel.R`; the ID does not require a Conda environment of the same name. Python dependencies for the unchanged D1 audit are `numpy`, `scipy`, `astropy`, `matplotlib` as already available in `waves_py`. Do not run the notebook on real data yet.
 

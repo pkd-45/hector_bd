@@ -61,6 +61,23 @@ bd_psf_pilot_gate <- function(ctx) {
     stop('Per-object PSF log/hash mismatch')
   invisible(TRUE)
 }
+bd_stage_input_hash <- function(res,ctx) {
+  observed <- if(!is.null(res$result$observed)) res$result$observed else
+    ctx$stages$inputs$result$observed
+  hashes <- observed$source_hashes
+  files <- observed$source_files
+  if(is.data.frame(files) && nrow(files)==1L) {
+    for (kind in names(hashes)) {
+      path_col <- paste0(kind,'_path')
+      if(!path_col %in% names(files)) stop('Input path missing for ',kind)
+      current <- bd_file_hash(files[[path_col]][[1]])
+      if(!identical(current,hashes[[kind]]))
+        stop('Input bytes changed for ',kind)
+      hashes[[kind]] <- current
+    }
+  }
+  .bd_hash(hashes)
+}
 bd_stage <- function(ctx, stage) {
   stopifnot(is.environment(ctx),stage %in% c('inputs','g2','f1_f9','fit','postprocess','card'))
   deps<-list(inputs=NULL,g2='inputs',f1_f9='g2',fit='f1_f9',postprocess='fit',card='postprocess')
@@ -75,6 +92,10 @@ bd_stage <- function(ctx, stage) {
     if (!identical(res$stage,stage) || !identical(res$id,ctx$id) ||
         !identical(res$mode,ctx$mode) || !identical(res$config_sha,.bd_hash(ctx$config[c('step0','paths','pilot','pins')])))
        stop('Existing stage artifact conflicts with current config; choose new run_id')
+    if(!identical(res$source_sha,bd_source_hash(ctx$config$root)))
+      stop('Existing stage artifact was produced by different source code; choose new run_id')
+    if(!identical(res$input_sha,.bd_stage_input_hash(res,ctx)))
+      stop('Existing stage artifact input bytes changed; choose new run_id')
     ctx$stages[[stage]]<-res
     return(res)
   }
@@ -135,7 +156,10 @@ bd_stage <- function(ctx, stage) {
     out<-list(path='card.png')
   }
   res<-list(stage=stage,id=ctx$id,mode=ctx$mode,
-            config_sha=.bd_hash(config[c('step0','paths','pilot','pins')]),result=out)
+            config_sha=.bd_hash(config[c('step0','paths','pilot','pins')]),
+            source_sha=bd_source_hash(config$root),
+            input_sha=bd_stage_input_hash(list(result=out),ctx),
+            result=out)
   bd_atomic_rds(res,artifact)
   sha<-bd_file_hash(artifact)
   hashfile<-paste0(artifact,'.sha256')

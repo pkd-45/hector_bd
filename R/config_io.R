@@ -49,6 +49,18 @@ bd_fingerprint <- function(config) {
   names(tab) <- packages
   tab
 }
+bd_source_hash <- function(root=bd_find_root()) {
+  files <- system2('git',c('-C',root,'ls-files','--',
+                           'R','config','env','scripts','slurm','python'),
+                   stdout=TRUE,stderr=TRUE)
+  status <- attr(files,'status')
+  if(!is.null(status) && status!=0) stop('Unable to enumerate Git-tracked source files')
+  if(!length(files)) stop('No Git-tracked source files found')
+  hashes <- vapply(files,function(path) {
+    digest::digest(file=file.path(root,path),algo='sha256')
+  },character(1))
+  digest::digest(paste(files,hashes,sep=':',collapse='\n'),algo='sha256')
+}
 `%||%` <- function(x,y) if(is.null(x) || length(x)==0L || is.na(x[1])) y else x
 bd_file_hash <- function(path) {
   if(!file.exists(path)) stop('Missing file: ',path)
