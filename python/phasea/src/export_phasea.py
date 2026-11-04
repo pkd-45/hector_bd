@@ -610,6 +610,9 @@ def draw_overlay(out,path,gid,image,L,labels,comparison,source):
     ax.legend(loc='upper right',fontsize=8);fig.tight_layout();fig.savefig(path,dpi=140);plt.close(fig)
 
 
+RUNTIME_PROBE_SENTINEL='RUNTIME_PROBE=COMPLETE'
+
+
 def create_runtime(rscript,out,historical_rlib):
     code=("cat('R_VERSION=',R.version.string,'\\n',sep='');"
       "cat('LIBS=',paste(.libPaths(),collapse=';'),'\\n',sep='');"
@@ -628,22 +631,23 @@ def create_runtime(rscript,out,historical_rlib):
       "cat('DESCRIPTION_MD5=',p,'/',scope,'/',unname(tools::md5sum(d)),'\\n',sep='')}};"
       "dll=list.files(file.path(ds[1],'libs'),pattern='[.](so|dylib)$',recursive=TRUE,full.names=TRUE);"
       "if(length(dll))for(f in dll)cat('DLL_MD5=',p,'/',scope,'/',basename(f),'/',unname(tools::md5sum(f)),'\\n',sep='')"
-      "};cat('RUNTIME_PROBE=COMPLETE\\n',sep='');}}}")
+      "}}};"
+      "cat('"+RUNTIME_PROBE_SENTINEL+"\\n')")
     env={**os.environ,'BD_PINNED_RLIB':historical_rlib}
     proc=subprocess.run([rscript,'--vanilla','-e',code],capture_output=True,text=True,env=env)
     report={'rscript':rscript,'returncode':proc.returncode,'stdout':proc.stdout,'stderr':proc.stderr,
             'pinned_historical_rlib':historical_rlib,'python':sys.version,'numpy':np.__version__}
+    # Fail closed: a probe that errors part-way still prints its first lines,
+    # so require both a zero exit code and the end-of-probe sentinel.
     failures=[]
-    if proc.returncode != 0:
-        failures.append('RUNTIME_PROBE_NONZERO_EXIT')
-    if 'RUNTIME_PROBE=COMPLETE' not in proc.stdout:
-        failures.append('RUNTIME_PROBE_SENTINEL_MISSING')
-    report['runtime_gate']='PASS' if not failures else 'FAIL'
+    if proc.returncode!=0:failures.append('RUNTIME_PROBE_NONZERO_EXIT:'+str(proc.returncode))
+    if RUNTIME_PROBE_SENTINEL not in proc.stdout.splitlines():failures.append('RUNTIME_PROBE_INCOMPLETE_NO_SENTINEL')
+    report['runtime_gate']='FAIL' if failures else 'PASS'
     report['runtime_gate_failures']=failures
     report['runtime_id']=hashlib.sha256(json.dumps(report,sort_keys=True).encode()).hexdigest()
     with open(out/'runtime.json','w') as f:json.dump(report,f,indent=2)
     if failures:
-        raise RuntimeError('Runtime provenance probe failed: '+', '.join(failures))
+        raise RuntimeError('Runtime provenance gate failed ('+';'.join(failures)+'); see '+str(out/'runtime.json')+': '+proc.stderr[-400:])
     return report['runtime_id']
 
 

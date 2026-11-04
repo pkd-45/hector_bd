@@ -1,10 +1,11 @@
 # Changelog
 
-## Phase A runtime probe correction — 2026-11-04
+## Phase A runtime probe fix — 2026-11-04
 
-- Fixed the generated R runtime fingerprint expression and added a fail-closed
-  gate requiring a zero exit status and `RUNTIME_PROBE=COMPLETE`.
-- Added regression tests for nonzero probe exits, missing sentinels, and success.
+- Fixed the D1 V04 exporter's runtime fingerprint R expression in `create_runtime()`: a missing `;` after the `DESCRIPTION_MD5` block made R fail with `unexpected symbol` (return code 1) after printing only the R version and pinned-library lines, as in the `HectorBD_PHASEA_DRY_V04` dry run.
+- The runtime-provenance gate now fails closed: the probe must exit 0 and print a final `RUNTIME_PROBE=COMPLETE` sentinel. `runtime.json` still records the gate verdict (`runtime_gate`, `runtime_gate_failures`) and the probe output before the exporter stops.
+- Added `python/phasea/tests/test_runtime_probe.py` (stubbed nonzero-exit and missing-sentinel cases; real probe when Rscript is available). Verified on Friday `login04` with `waves_r` R 4.3.3 against `/data/uqpdas/WAVES_v38_profit272_pilot/Rlib`: return code 0, gate PASS, all six packages probed in both scopes.
+- This is a probe fix only. No Phase A audit was re-run, and no labels, HDUs or fits were touched.
 
 ## Local Mac setup correction — 2026-11-03
 
