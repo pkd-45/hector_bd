@@ -44,13 +44,13 @@ cd hector_bd
 conda activate waves_py
 export R_LIBS_USER="$PWD/env/restart_Rlib:/Users/uqpdas/work/PhD-UQ/bt_final_v2/.Rlib"
 Rscript env/install_pinned.R
-Rscript -e 'if (!requireNamespace("IRkernel", quietly=TRUE)) install.packages("IRkernel", lib="env/restart_Rlib", repos="https://cloud.r-project.org")'
+Rscript -e 'if (!requireNamespace("IRkernel", quietly=TRUE)) install.packages("IRkernel", lib="env/restart_Rlib", repos="https://cloud.r-project.org", dependencies=TRUE)'
 Rscript env/register_irkernel.R
 bash tests/run_checks.sh
 code .
 ```
 
-Run `which Rscript` to confirm native `/usr/local/bin/Rscript` is selected. The historical library already supplies the science dependencies, `yaml` and `remotes`; eight package source SHAs differ from this restart's pins. The installer adds the exact pins in dependency order to `env/restart_Rlib`, with automatic dependency installation disabled. Any missing prerequisite is reported by R; install it into the restart library. The IRkernel command adds missing notebook tooling there as well. Launch VS Code from this shell so it inherits `R_LIBS_USER`.
+Run `which Rscript` to confirm native `/usr/local/bin/Rscript` is selected. The historical library already supplies `yaml` and `remotes`; the installer adds the exact pins in dependency order and provisions their CRAN runtime dependencies into `env/restart_Rlib`. The IRkernel command adds missing notebook tooling there as well. Launch VS Code from this shell so it inherits `R_LIBS_USER`.
 
 The kernel ID `waves_r_bd` is retained for notebook compatibility and is registered against the R that runs `env/register_irkernel.R`; the ID does not require a Conda environment of the same name. Python dependencies for the unchanged D1 audit are `numpy`, `scipy`, `astropy`, `matplotlib` as already available in `waves_py`. Do not run the notebook on real data yet.
 

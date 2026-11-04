@@ -3,7 +3,6 @@
 source(file.path('R','00_load_all.R'))
 root<-bd_find_root()
 if(!requireNamespace('yaml',quietly=TRUE)) stop('Make yaml available to the active R; it reads the lock file')
-if(!requireNamespace('remotes',quietly=TRUE)) stop('Make remotes available to the active R; no unpinned auto-bootstrap')
 pins<-yaml::read_yaml(file.path(root,'config','package_pins.yaml'))$packages
 lib<-file.path(root,'env','restart_Rlib')
 if(file.exists(lib) && nzchar(Sys.readlink(lib))) stop('Refusing symlinked restart Rlib')
@@ -11,6 +10,27 @@ dir.create(lib,showWarnings=FALSE,recursive=TRUE)
 if(any(normalizePath(.libPaths(),mustWork=FALSE)==normalizePath(lib,mustWork=TRUE)))
   message('Restart lib already active')
 .libPaths(c(lib,.libPaths()))
+# These are CRAN runtime dependencies of the pinned source packages. Keep them
+# in the restart library so it remains usable when no historical library is
+# inherited by a notebook kernel.
+cran_dependencies<-c('backports','checkmate','foreach','iterators','doParallel',
+                      'data.table','numDeriv','cubature','matrixStats','RANN',
+                      'NISTunits','pracma','plotrix','sm','maps','mapproj')
+missing_dependencies<-cran_dependencies[
+  !vapply(cran_dependencies,
+          function(package) nzchar(system.file(package=package,lib.loc=lib)),
+          logical(1))]
+if(length(missing_dependencies)) {
+  install.packages(missing_dependencies,lib=lib,
+                   repos='https://cloud.r-project.org',dependencies=TRUE)
+}
+still_missing<-cran_dependencies[
+  !vapply(cran_dependencies,function(package)
+    is.list(suppressWarnings(utils::packageDescription(package,lib.loc=lib))),
+    logical(1))]
+if(length(still_missing))
+  stop('Missing restart-library dependencies after installation: ',
+       paste(still_missing,collapse=', '))
 # Install dependencies before consumers, without fetching unpinned Git remotes.
 install_order<-c('ParmOff','celestial','magicaxis','LaplacesDemon','cmaeshpc',
                  'digest','Rfits','Rwcs','Highlander','ProFit','ProFound')
@@ -22,6 +42,9 @@ for(n in install_order) {
     message(n,' already at requested SHA; skipping')
   } else {
     if(is.list(desc)) stop('Conflicting restart package exists: ',n, ' (will not overwrite it)')
+    if(!requireNamespace('remotes',quietly=TRUE))
+      stop('Make remotes available to the active R before installing ',n,
+           '; no unpinned auto-bootstrap')
     # remotes also searches other libraries; a matching historical install must
     # not prevent this missing package from being installed into the restart lib.
     remotes::install_github(paste0(p$repo,'@',p$sha),lib=lib,upgrade='never',
