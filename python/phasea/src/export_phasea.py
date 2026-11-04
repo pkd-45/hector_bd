@@ -625,16 +625,25 @@ def create_runtime(rscript,out,historical_rlib):
       "a=tryCatch(read.dcf(d),error=function(e)NULL);if(!is.null(a)){"
       "for(k in intersect(c('Version','RemoteSha','GithubSHA1','Built'),colnames(a)))"
       "cat('FIELD=',p,'/',scope,'/',k,'/',a[1,k],'\\n',sep='');"
-      "cat('DESCRIPTION_MD5=',p,'/',scope,'/',unname(tools::md5sum(d)),'\\n',sep='')}}"
+      "cat('DESCRIPTION_MD5=',p,'/',scope,'/',unname(tools::md5sum(d)),'\\n',sep='')}};"
       "dll=list.files(file.path(ds[1],'libs'),pattern='[.](so|dylib)$',recursive=TRUE,full.names=TRUE);"
       "if(length(dll))for(f in dll)cat('DLL_MD5=',p,'/',scope,'/',basename(f),'/',unname(tools::md5sum(f)),'\\n',sep='')"
-      "}}}")
+      "};cat('RUNTIME_PROBE=COMPLETE\\n',sep='');}}}")
     env={**os.environ,'BD_PINNED_RLIB':historical_rlib}
     proc=subprocess.run([rscript,'--vanilla','-e',code],capture_output=True,text=True,env=env)
     report={'rscript':rscript,'returncode':proc.returncode,'stdout':proc.stdout,'stderr':proc.stderr,
             'pinned_historical_rlib':historical_rlib,'python':sys.version,'numpy':np.__version__}
+    failures=[]
+    if proc.returncode != 0:
+        failures.append('RUNTIME_PROBE_NONZERO_EXIT')
+    if 'RUNTIME_PROBE=COMPLETE' not in proc.stdout:
+        failures.append('RUNTIME_PROBE_SENTINEL_MISSING')
+    report['runtime_gate']='PASS' if not failures else 'FAIL'
+    report['runtime_gate_failures']=failures
     report['runtime_id']=hashlib.sha256(json.dumps(report,sort_keys=True).encode()).hexdigest()
     with open(out/'runtime.json','w') as f:json.dump(report,f,indent=2)
+    if failures:
+        raise RuntimeError('Runtime provenance probe failed: '+', '.join(failures))
     return report['runtime_id']
 
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Phase A runtime probe correction — 2026-11-04
+
+- Fixed the generated R runtime fingerprint expression and added a fail-closed
+  gate requiring a zero exit status and `RUNTIME_PROBE=COMPLETE`.
+- Added regression tests for nonzero probe exits, missing sentinels, and success.
+
 ## Local Mac setup correction — 2026-11-03
 
 - Reuse `waves_py`, native R and the existing WAVES `.Rlib`; keep exact restart pins in `env/restart_Rlib`.
