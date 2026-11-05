@@ -1,5 +1,17 @@
 # Changelog
 
+## Observed cache-provenance repair — 2026-11-05
+
+- Fixed the saved-stage resume function name.
+- Revalidate the current verified catalogue/index row when resuming observed stages.
+- Reject missing, incomplete, or malformed source hashes, including the PSF.
+- Reject changes to catalogue labels, source files, and FITS bytes.
+- Preserve synthetic resume behaviour.
+- Include tracked tests and fixtures in the source fingerprint.
+- Added the stage-resume provenance regression to the standard test suite.
+- No observed fitting or historical-data modification was performed.
+
+
 ## Phase A runtime probe fix — 2026-11-04
 
 - Fixed the D1 V04 exporter's runtime fingerprint R expression in `create_runtime()`: a missing `;` after the `DESCRIPTION_MD5` block made R fail with `unexpected symbol` (return code 1) after printing only the R version and pinned-library lines, as in the `HectorBD_PHASEA_DRY_V04` dry run.

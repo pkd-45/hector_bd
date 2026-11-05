@@ -50,8 +50,8 @@ bd_fingerprint <- function(config) {
   tab
 }
 bd_source_hash <- function(root=bd_find_root()) {
-  files <- system2('git',c('-C',root,'ls-files','--',
-                           'R','config','env','scripts','slurm','python'),
+  files <- system2('git',c('-C',shQuote(root),'ls-files','--',
+                           'R','config','env','scripts','slurm','python','tests/fixtures'),
                    stdout=TRUE,stderr=TRUE)
   status <- attr(files,'status')
   if(!is.null(status) && status!=0) stop('Unable to enumerate Git-tracked source files')

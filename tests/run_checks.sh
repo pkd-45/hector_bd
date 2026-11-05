@@ -26,4 +26,5 @@ Rscript tests/test_moment_pa_convention.R
 Rscript tests/test_psf_v14_synthetic.R
 Rscript tests/run_renderer_tests.R
 Rscript tests/test_synthetic_recovery.R
+Rscript tests/test_stage_resume_provenance.R
 "$PYTHON_BIN" tests/test_notebook_cli_equivalence.py

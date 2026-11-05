@@ -66,6 +66,23 @@ bd_stage_input_hash <- function(res,ctx) {
     ctx$stages$inputs$result$observed
   hashes <- observed$source_hashes
   files <- observed$source_files
+  if(identical(ctx$mode,'observed')) {
+    required_hashes <- c('image','segmap','psf')
+    if (!is.list(hashes) ||
+        !identical(sort(names(hashes)),sort(required_hashes)) ||
+        !all(vapply(hashes,function(x)
+          is.character(x) && length(x)==1L &&
+          !is.na(x) && grepl('^[0-9a-fA-F]{64}$',x),
+          logical(1))))
+      stop('Observed source hashes missing, malformed or incomplete')
+    # Fail closed, and bind the cache to the CURRENT verified index row: bd_index_row re-reads
+    # labels, coordinates, HDUs and paths and re-hashes the image, segmap and PSF files.
+    if(!(is.data.frame(files) && nrow(files)==1L))
+      stop('Observed stage lacks its verified index row; provenance cannot be checked; do not resume')
+    current <- bd_index_row(ctx$config,ctx$id)
+    if(!identical(.bd_hash(as.list(current)),.bd_hash(as.list(files))))
+      stop('Verified index row changed (labels, coordinates, HDUs, paths or file bytes); choose new run_id')
+  }
   if(is.data.frame(files) && nrow(files)==1L) {
     for (kind in names(hashes)) {
       path_col <- paste0(kind,'_path')
@@ -76,7 +93,7 @@ bd_stage_input_hash <- function(res,ctx) {
       hashes[[kind]] <- current
     }
   }
-  .bd_hash(hashes)
+  .bd_hash(list(hashes=hashes,index_row=if(is.data.frame(files)) as.list(files) else NULL))
 }
 bd_stage <- function(ctx, stage) {
   stopifnot(is.environment(ctx),stage %in% c('inputs','g2','f1_f9','fit','postprocess','card'))
@@ -94,7 +111,7 @@ bd_stage <- function(ctx, stage) {
        stop('Existing stage artifact conflicts with current config; choose new run_id')
     if(!identical(res$source_sha,bd_source_hash(ctx$config$root)))
       stop('Existing stage artifact was produced by different source code; choose new run_id')
-    if(!identical(res$input_sha,.bd_stage_input_hash(res,ctx)))
+    if(!identical(res$input_sha,bd_stage_input_hash(res,ctx)))
       stop('Existing stage artifact input bytes changed; choose new run_id')
     ctx$stages[[stage]]<-res
     return(res)
