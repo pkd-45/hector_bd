@@ -54,15 +54,27 @@ Run `which Rscript` to confirm native `/usr/local/bin/Rscript` is selected. The 
 
 The kernel ID `waves_r_bd` is retained for notebook compatibility and is registered against the R that runs `env/register_irkernel.R`; the ID does not require a Conda environment of the same name. Python dependencies for the unchanged D1 audit are `numpy`, `scipy`, `astropy`, `matplotlib` as already available in `waves_py`. Do not run the notebook on real data yet.
 
-## Friday — up to five shell commands
+## Friday — pinned R environment through SLURM
 
 ```bash
 cd hector_bd
-conda activate waves_r
-Rscript env/install_pinned.R
-bash tests/run_checks.sh
-Rscript env/check_environment.R
+sbatch slurm/repair_r_environment.sbatch install
+# After installation succeeds, run isolated F6 before the full F1–F9 suite:
+sbatch slurm/repair_r_environment.sbatch f6
+sbatch slurm/repair_r_environment.sbatch renderers
 ```
+
+The job sources `env/friday_r.sh`, which exposes the complete existing
+`waves_r` Conda-forge compiler and binutils toolchain on `PATH`, including tools
+used by nested Makefiles. It does not activate Conda's R hook or change the
+historical R configuration. All installations target `env/restart_Rlib`;
+temporary build files stay on the compute node. Logs and package/DLL manifests
+are under `outputs/r_environment_<jobid>*`. The `renderers` phase repeats
+isolated F6 and proceeds to F1–F9 only if it passes. The `verify` phase checks an
+existing installation without reinstalling. For subsequent Friday SLURM jobs,
+source `env/friday_r.sh` before invoking `Rscript --vanilla`.
+The full F2 reference scans can exceed two CPU hours; the batch script allows
+eight hours for the complete suite.
 
 The `paths_friday.yaml` profile carries `/data` only as a protected root, not an invented science path. The source file index comes from the Stage 0 collector. The existing, separately reviewed D1 V04 Mac collector and read-only 3-galaxy dry run are in `python/phasea/` for traceability; their original shell safety contract is unchanged. For its invocation, use the original readme in `python/phasea/` and **not** the fitting CLI.
 
