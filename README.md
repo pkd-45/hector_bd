@@ -1,6 +1,16 @@
 # Hector/WAVES bulge–disc restart — V03 corrected PSF review candidate
 
-**Status: code-delivery / synthetic verification only. No real science images have been opened, no fits have run, and no 20- or 832-object run is authorised.** This repo is designed to be dropped into an existing directory and opened as the `hector_bd/` workspace in VS Code. Every notebook and batch step calls the same functions in `R/fit_one.R` (`bd_stage`, `bd_run_one`). It deliberately fails closed on uncertain FITS and model-runtime conventions.
+**Status: independent scientific review pending. Read-only Friday image/segmentation diagnostics and synthetic validation have run; restart observed fitting and 20- or 832-object runs remain unauthorised.** This repo is designed to be dropped into an existing directory and opened as the `hector_bd/` workspace in VS Code. Every notebook and batch step calls the same functions in `R/fit_one.R` (`bd_stage`, `bd_run_one`). It deliberately fails closed on uncertain FITS and model-runtime conventions.
+
+## Friday source and evidence handoff (2026-11-10)
+
+See [the source handoff](reference/reviews/FRIDAY_SOURCE_HANDOFF_20261110.md)
+for the latest calibration, historical-P extraction, synthetic-validation and
+pilot-preparation source inventory, existing job results and evidence limits.
+[Calibration provenance remains unresolved](reference/calibration_evidence_gap.md).
+The next step is Claude's independent review of the pushed source and actual
+numerical evidence. No scientific acceptance criteria or approval flags have
+been changed.
 
 
 ## V03.1 patched source (2026-11-03)
@@ -90,7 +100,7 @@ A1 target mapping uses the original segmap WCS to select the **exact catalogue p
 
 **To verify real input paths:** populate `config/verified_path_index.tsv` with the collector-confirmed paths for the pilot. HDU indices in this TSV are **zero-based FITS indices**; `io_fits.R` converts to Rfits's 1-based `ext` and forbids its extension-autoselection. The current file has headers only and therefore cannot be mistaken for verified data. Compressed `.fits.gz` input is blocked until decompression side effects are audited or a separately verified uncompressed input copy is prepared; it cannot silently decompress alongside historical files. The verified PSF RDS must be a matrix; a list-structured historical PSF requires a separately reviewed extractor, not guesswork. Detector mask policy must be `NONE_VERIFIED_FROM_SOURCE` if a separate detector mask is confirmed absent; no silent all-good assumption is permitted.
 
-`config/run_pilot.yaml` preserves the ten named galaxies in the restart specification. The remaining ten are **not named in the source files**. `scripts/freeze_pilot.py` deterministically stratifies 10 additional IDs across size, n, and crowding **only from the frozen R61 832-object roster**, writes a JSON candidate for review and never modifies config. Do not fill with invented IDs, or mix R54/R61/R74. The actual 20 ID list and hashes must be approved and recorded before pilot execution.
+`config/run_pilot.yaml` preserves the ten named galaxies in the restart specification. `scripts/freeze_pilot.py` prepares a review-only candidate using the frozen R61 832-object roster, its recorded brightness/size strata, native model and resolution quartile, and the existing original-segmentation/catalogue audit. It records the proposed replacement of the WCS-ineligible anchor and selects ten additional eligible IDs; it never modifies config or the 832-object roster. Missing R50, physical Sersic n and crowding are explicitly recorded rather than fabricated. Do not mix R54/R61/R74. The actual 20 ID list and hashes must be approved and recorded before pilot execution.
 
 ### Approval sequence
 

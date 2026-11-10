@@ -40,7 +40,9 @@ pilot <- list(models=c('S','P','D_FIXED4','BD_FREE_N'),
   magzero=23.9,finesample=1L,seeds=list(109L),optim_maxit=500L,
   synthetic_test_mode=TRUE)
 start <- Sys.time()
-fits <- bd_fit_four_models(ipt,pilot)
+diagnostic_dir <- Sys.getenv('BD_SYNTHETIC_REPORT_DIR',unset='')
+fits <- bd_fit_four_models(ipt,pilot,diagnostic_dir=
+  if(nzchar(diagnostic_dir)) file.path(diagnostic_dir,'optimizer_starts') else NULL)
 elapsed <- as.numeric(difftime(Sys.time(),start,units='secs'))
 stopifnot(setequal(names(fits),pilot$models),
   all(vapply(fits,function(x)x$convergence==0L && x$failed_evaluations==0L,logical(1))))

@@ -10,6 +10,7 @@ def main():
   print('UNRUN: Rscript absent; notebook/CLI byte test NOT verified')
   return 2
  nb=json.loads((ROOT/'notebooks/01_explore_one_galaxy.ipynb').read_text())
+ artifact_report=[]
  with tempfile.TemporaryDirectory() as temp:
   # Resolve macOS's /var alias before the output safety check sees parents.
   temp=pathlib.Path(temp).resolve()
@@ -37,7 +38,18 @@ def main():
    p=a/'byte_equiv'/'W42710765002459'/name
    q=b/'byte_equiv'/'W42710765002459'/name
    if not p.exists() or not q.exists(): raise AssertionError('Missing artifacts: '+name)
-   if p.read_bytes()!=q.read_bytes():raise AssertionError('NOT BYTE IDENTICAL: '+name)
+   p_bytes=p.read_bytes();q_bytes=q.read_bytes()
+   record={'artifact':name,'notebook_sha256':hashlib.sha256(p_bytes).hexdigest(),
+           'cli_sha256':hashlib.sha256(q_bytes).hexdigest(),
+           'notebook_bytes':len(p_bytes),'cli_bytes':len(q_bytes),
+           'byte_identical':p_bytes==q_bytes}
+   artifact_report.append(record)
+   print('PARITY_ARTIFACT '+json.dumps(record,sort_keys=True),flush=True)
+   report_dir=os.environ.get('BD_SYNTHETIC_REPORT_DIR')
+   if report_dir:
+    (pathlib.Path(report_dir)/'notebook_cli_artifacts.json').write_text(
+       json.dumps(artifact_report,indent=2)+'\n')
+   if p_bytes!=q_bytes:raise AssertionError('NOT BYTE IDENTICAL: '+name)
   print('PASS notebook vs CLI BYTE-IDENTICAL synthetic inputs.rds + g2.rds')
  return 0
 if __name__=='__main__':sys.exit(main())
