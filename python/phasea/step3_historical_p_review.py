@@ -32,6 +32,34 @@ def sha256(path):
     return h.hexdigest()
 
 
+def git_provenance(repo, files):
+    """Bind executed sources to the committed tree (Claude review P1-3)."""
+    def git(*args):
+        return subprocess.run(['git', '-C', str(repo), *args], check=True, text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.strip()
+    head = git('rev-parse', 'HEAD')
+    sources = {}
+    for path in files:
+        relative = Path(path).resolve().relative_to(repo).as_posix()
+        committed = git('rev-parse', f'HEAD:{relative}')
+        executed = git('hash-object', '--', relative)
+        sources[relative] = {'committed_blob': committed, 'executed_blob': executed,
+                             'matches_HEAD': committed == executed}
+    return {'git_HEAD': head, 'git_tracked_changes': git('status', '--porcelain',
+            '--untracked-files=no').splitlines(), 'executed_sources': sources}
+
+
+def centroid_offset_range(records):
+    """Range of accepted-kernel physical centroid offsets from the grid centre (x, y)."""
+    offsets = [r['accepted_psf_geometry']['centroid_offset_from_grid_centre_xy']
+               for r in records if r.get('accepted_psf_geometry')]
+    if not offsets:
+        return None
+    return {'count': len(offsets),
+            'x_min': min(o[0] for o in offsets), 'x_max': max(o[0] for o in offsets),
+            'y_min': min(o[1] for o in offsets), 'y_max': max(o[1] for o in offsets)}
+
+
 def read_tsv(path):
     with Path(path).open(newline='', encoding='utf-8-sig') as stream:
         return list(csv.DictReader(stream, delimiter='\t'))
@@ -134,6 +162,33 @@ def bindings(r61, r53):
         'selection_policy': POLICY, 'r74_selection_fields_used': False}
 
 
+def summarise(evidence, records):
+    """Counts and per-record kernel evidence written to summary.json."""
+    summary = dict(evidence)
+    summary.update({'record_count': len(records),
+        'accepted_finesample_presence_counts': dict(Counter(r['accepted']['Data_finesample']['presence'] for r in records)),
+        'accepted_psftype_presence_counts': dict(Counter(r['accepted']['Data_psftype']['presence'] for r in records)),
+        'accepted_finesample_values': dict(Counter(json.dumps(r['accepted']['Data_finesample']['value'], sort_keys=True) for r in records)),
+        'accepted_psftype_values': dict(Counter(json.dumps(r['accepted']['Data_psftype']['value'], sort_keys=True) for r in records)),
+        'metadata_flags': dict(Counter(flag for r in records for flag in r['metadata_flags'])),
+        'accepted_source_kernel_comparison': dict(Counter(r['accepted_source_psf_comparison'] for r in records)),
+        'accepted_source_kernel_value_classification': dict(Counter(
+            r['accepted_source_psf_value_comparison']['class'] for r in records)),
+        'accepted_cache_kernel_value_classification': dict(Counter(
+            f'{key}:{value["class"]}' for r in records
+            for key, value in (r['accepted_cache_kernel_value_comparisons'] or {}).items())),
+        'accepted_source_kernel_differences': [{
+            'uberID': r['uberID'], 'hash_comparison': r['accepted_source_psf_comparison'],
+            **{key: r['accepted_source_psf_value_comparison'].get(key) for key in (
+                'class', 'same_dimensions', 'sum_a', 'sum_b', 'max_abs_raw_difference_common',
+                'max_abs_normalised_difference', 'normalised_difference_relative_to_peak',
+                'pixels_differing_common', 'pixels_common')}}
+            for r in records if r['accepted_source_psf_comparison'] != 'EXACT_NUMERIC_KERNEL_MATCH'],
+        'accepted_kernel_centroid_offset_from_grid_centre_px': centroid_offset_range(records),
+        'fit_authorized': False, 'scientific_interpretation': 'Historical metadata review only; absent settings do not establish a rendering defect.'})
+    return summary
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[2])
@@ -152,6 +207,10 @@ def main():
         ap.error('Output must be a new, nonexistent directory')
     if (repo / 'outputs').resolve() not in out.resolve().parents:
         ap.error('Output must be under this repository outputs directory')
+    helper = repo / 'python/phasea/src/export_historical_p_metadata.R'
+    provenance = git_provenance(repo, [Path(__file__), helper])
+    if not all(s['matches_HEAD'] for s in provenance['executed_sources'].values()):
+        ap.error('Driver or R helper differs from the committed HEAD; commit before running')
     selected, evidence = bindings(args.r61, args.r53)
     out.mkdir(parents=True, exist_ok=False)
     binding_path = out / 'selected_p_bindings.tsv'
@@ -159,9 +218,9 @@ def main():
         writer = csv.DictWriter(stream, fieldnames=list(selected[0]), delimiter='\t')
         writer.writeheader()
         writer.writerows(selected)
-    helper = repo / 'python/phasea/src/export_historical_p_metadata.R'
     evidence.update({'job_id': os.environ['SLURM_JOB_ID'], 'script_sha256': sha256(__file__),
         'helper_sha256': sha256(helper), 'bindings_sha256': sha256(binding_path),
+        'source_provenance': provenance,
         'r61_root': str(args.r61), 'r53_root': str(args.r53),
         'scope': 'READ_ONLY_HISTORICAL_METADATA_NO_RENDERING_NO_FITTING',
         'absent_settings_policy': 'ABSENT_IS_UNKNOWN_NEVER_DEFAULTED_OR_INFERRED'})
@@ -176,15 +235,7 @@ def main():
     records = [json.loads(line) for line in (out / 'historical_p_metadata.jsonl').read_text().splitlines()]
     if len(records) != 68 or {r['uberID'] for r in records} != {r['uberID'] for r in selected}:
         raise ValueError('R metadata output membership/count mismatch')
-    summary = dict(evidence)
-    summary.update({'record_count': len(records),
-        'accepted_finesample_presence_counts': dict(Counter(r['accepted']['Data_finesample']['presence'] for r in records)),
-        'accepted_psftype_presence_counts': dict(Counter(r['accepted']['Data_psftype']['presence'] for r in records)),
-        'accepted_finesample_values': dict(Counter(json.dumps(r['accepted']['Data_finesample']['value'], sort_keys=True) for r in records)),
-        'accepted_psftype_values': dict(Counter(json.dumps(r['accepted']['Data_psftype']['value'], sort_keys=True) for r in records)),
-        'metadata_flags': dict(Counter(flag for r in records for flag in r['metadata_flags'])),
-        'accepted_source_kernel_comparison': dict(Counter(r['accepted_source_psf_comparison'] for r in records)),
-        'fit_authorized': False, 'scientific_interpretation': 'Historical metadata review only; absent settings do not establish a rendering defect.'})
+    summary = summarise(evidence, records)
     (out / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     print(json.dumps(summary, indent=2), flush=True)
     print('HISTORICAL_SELECTED_P_METADATA_REVIEW_COMPLETE', flush=True)

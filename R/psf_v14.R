@@ -148,7 +148,7 @@ suppressPackageStartupMessages({
 .render_moffat <- function(fwhm, con, axrat = 1, ang = 0, dim = c(75L, 75L),
                            magzero = 0) {
   dim <- as.integer(dim); if (any(dim %% 2L == 0L)) dim <- dim + 1L
-  cx <- (dim[1] + 1) / 2; cy <- (dim[2] + 1) / 2
+  cx <- dim[1] / 2; cy <- dim[2] / 2   # ProFit native: pixel i spans [i-1,i]; grid centre is dim/2
   ml <- list(moffat = list(
     xcen  = cx, ycen = cy,
     mag   = 0,
@@ -515,8 +515,11 @@ select_clean_stars_v10 <- function(pf,
   axrat0 <- max(min(seg_row$axrat %||% 0.95, 0.99), 0.2)
   ang0   <- (seg_row$ang %||% 0) %% 180
   ## centre of stamp in stamp coords
-  ccx <- (nrow(norm_stamp) + 1) / 2
-  ccy <- (ncol(norm_stamp) + 1) / 2
+  ccx <- nrow(norm_stamp) / 2   # physical stamp centre, ProFit coordinates
+  ccy <- ncol(norm_stamp) / 2
+  ## Expected star position: v9 .refine_centroid (sourced first in production)
+  ## returns 1-based index coordinates, so round(xc) is the star's pixel and the
+  ## star lies at n/2 +/- 0.5 here (tests/test_psf_star_stamp_centre.R).
   par0 <- if (!is.null(par_init)) par_init else c(
     log_fwhm   = log(fwhm0),
     log_conm1  = log(max(con0 - 1, 0.1)),
@@ -780,8 +783,11 @@ select_clean_stars_v10 <- function(pf,
   con0   <- 2.5
   axrat0 <- max(min(seg_row$axrat %||% 0.95, 0.99), 0.2)
   ang0   <- (seg_row$ang %||% 0) %% 180
-  ccx <- (nrow(norm_stamp) + 1) / 2
-  ccy <- (ncol(norm_stamp) + 1) / 2
+  ccx <- nrow(norm_stamp) / 2   # physical stamp centre, ProFit coordinates
+  ccy <- ncol(norm_stamp) / 2
+  ## Expected star position: v9 .refine_centroid (sourced first in production)
+  ## returns 1-based index coordinates, so round(xc) is the star's pixel and the
+  ## star lies at n/2 +/- 0.5 here (tests/test_psf_star_stamp_centre.R).
   par0 <- if (!is.null(par_init)) par_init else c(
     log_fwhm   = log(fwhm0),
     log_conm1  = log(max(con0 - 1, 0.1)),

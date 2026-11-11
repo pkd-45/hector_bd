@@ -16,3 +16,8 @@ source env/friday_r.sh
 export BD_PSF_GEOMETRY_REPORT_DIR="$PWD/outputs/psf_geometry_${SLURM_JOB_ID}"
 mkdir "$BD_PSF_GEOMETRY_REPORT_DIR"
 Rscript --vanilla tests/test_psf_centering.R
+# Star-stamp convention behind the patched per-star initial guess (synthetic only).
+Rscript --vanilla tests/test_psf_star_stamp_centre.R
+# PSF helper and P branch contracts; no observed data and no F1-F9 rerun.
+Rscript --vanilla tests/test_psf_v14_synthetic.R
+Rscript --vanilla tests/test_psf_branch_contract.R

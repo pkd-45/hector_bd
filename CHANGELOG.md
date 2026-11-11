@@ -1,5 +1,32 @@
 # Changelog
 
+## Claude review corrections at 489e737 — 2026-11-11
+
+Review archive: `reference/reviews/claude_20261111/` (SHA256SUMS.txt verified).
+
+- P1-1 PSF centre: applied `claude_psf_centre_fix.patch` unchanged. `.render_moffat`
+  now places the Moffat at the ProFit grid centre `dim/2` (was `(dim+1)/2`, +0.5 px).
+  The two per-star hunks move the initial guess and ±3 px bounds to the stamp's
+  physical centre `n/2`; that is the expected star position only because
+  `profuse_psf_v9.R` (sourced first by `scripts/build_pilot_psf_candidate.R`) makes
+  `.refine_centroid` return 1-based index coordinates. A comment records this and
+  `tests/test_psf_star_stamp_centre.R` checks it on synthetic stars with and without v9.
+- Not changed, reported for review: the 1 px star-centre suitability window in
+  `.gama_suitability` / `.gama_suitability_dr4` is still centred on `(stamp_size+1)/2`.
+  In the production (v9) path it spans −0.5…+1.5 px about the expected star centre.
+- P1-2 Rfits samples: applied `claude_rfits_sample_tolerance.patch`, then moved the
+  comparison into `check_rfits_samples()` (same tolerance) so the regression tests
+  exercise the code `run()` uses. Added a sample-count check (a short R list was
+  silently truncated by `zip`) and a finiteness-flag check. Tests reproduce the job
+  1453635 values, reject a transposed read and fail against the unpatched script.
+- P1-3/P2-1 historical P: the step-3 driver now refuses to run unless it and its R
+  helper match their committed blobs, and records `git_HEAD`. The helper adds
+  value-level kernel classification (`EXACT`, `RENORMALISED`, `RESIZED`,
+  `DIFFERENT_KERNEL`, `DIFFERENT_KERNEL_AND_DIMENSIONS`) and per-kernel physical
+  centroid geometry; the original hash comparison is kept unchanged.
+- `slurm/psf_geometry.sbatch` also runs the star-stamp, v14 helper and P branch tests.
+- No observed fit, F1–F9 rerun, approval flag, Step 0 field or original data changed.
+
 ## Observed cache-provenance repair — 2026-11-05
 
 - Fixed the saved-stage resume function name.

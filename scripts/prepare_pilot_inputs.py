@@ -10,6 +10,7 @@ import csv
 import gzip
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -77,6 +78,36 @@ def array_evidence(data):
                 finite_count=int(np.isfinite(data).sum()),samples=samples,
                 orientation='Rfits[x,y] equals Astropy[y-1,x-1]; R column-major bytes '
                             'equal Astropy row-major bytes after float64 little-endian conversion')
+
+
+# R's jsonlite (digits=NA) writes 15 significant digits, so the R-side sample values are
+# rounded copies of the Astropy doubles. The tolerance is far below any physical difference
+# but above serialisation rounding (Claude review of 489e737: all Friday samples agree to
+# <4e-15 relative), and far below the difference between a value and its transpose.
+SAMPLE_REL_TOL=1e-12
+SAMPLE_ABS_TOL=1e-15
+
+
+def sample_values_agree(expected,actual):
+    """True when two serialised sample values are the same double up to JSON rounding."""
+    if expected is None or actual is None:return expected is None and actual is None
+    return math.isclose(expected,actual,rel_tol=SAMPLE_REL_TOL,abs_tol=SAMPLE_ABS_TOL)
+
+
+def check_rfits_samples(name,expected_samples,actual_samples):
+    """Production comparison of Astropy (expected) and Rfits (actual) point samples.
+
+    Raises ValueError unless both lists have the same, nonzero length and every sample
+    has identical FITS coordinates, identical finiteness and numerically equal values.
+    """
+    if not expected_samples or len(expected_samples)!=len(actual_samples):
+        raise ValueError(f'{name}: Rfits sample count differs from Astropy sample count')
+    for expected,actual in zip(expected_samples,actual_samples):
+        if (expected['fits_x_1based']!=actual['fits_x_1based'] or
+            expected['fits_y_1based']!=actual['fits_y_1based'] or
+            expected.get('finite')!=actual.get('finite') or
+            not sample_values_agree(expected['value'],actual['value'])):
+            raise ValueError(f'{name}: explicit off-diagonal Rfits sample differs')
 
 
 def write_json(path,value):
@@ -160,10 +191,7 @@ def run(args):
             or observed['matrix_dims']!=copy['array']['expected_Rfits_shape_xy']
             or observed['finite_count']!=copy['array']['finite_count']):
             raise ValueError(f'{name}: full Astropy/Rfits numeric orientation identity failed')
-        for expected,actual in zip(copy['array']['samples'],observed['samples']):
-            if (expected['fits_x_1based']!=actual['fits_x_1based'] or
-                expected['fits_y_1based']!=actual['fits_y_1based'] or expected['value']!=actual['value']):
-                raise ValueError(f'{name}: explicit off-diagonal Rfits sample differs')
+        check_rfits_samples(name,copy['array']['samples'],observed['samples'])
         if sha256(copy['path'])!=copy['sha256']:raise ValueError('R read modified copied FITS bytes')
     after={name:source_identity(path) for name,path in originals.items()}
     if before!=after:raise RuntimeError('Original compressed SHA/mtime/size changed during preparation')
