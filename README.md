@@ -2,6 +2,16 @@
 
 **Status: independent scientific review pending. Read-only Friday image/segmentation diagnostics and synthetic validation have run; restart observed fitting and 20- or 832-object runs remain unauthorised.** This repo is designed to be dropped into an existing directory and opened as the `hector_bd/` workspace in VS Code. Every notebook and batch step calls the same functions in `R/fit_one.R` (`bd_stage`, `bd_run_one`). It deliberately fails closed on uncertain FITS and model-runtime conventions.
 
+## Claude review corrections (2026-11-11)
+
+The PSF-centre and Rfits-sample corrections from the review of `489e737` are
+applied and verified through SLURM; the pilot input copies for
+W11690092907692 and the historical-P extraction now complete from committed
+source. See [the review response](reference/reviews/FRIDAY_REVIEW_RESPONSE_20261111.md)
+for job IDs, results, two new PSF findings (star-centre suitability window,
+v12 star-fit convergence) and the remaining blockers. Observed fitting stays
+unauthorised.
+
 ## Friday source and evidence handoff (2026-11-10)
 
 See [the source handoff](reference/reviews/FRIDAY_SOURCE_HANDOFF_20261110.md)

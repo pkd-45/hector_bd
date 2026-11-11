@@ -25,7 +25,17 @@ Review archive: `reference/reviews/claude_20261111/` (SHA256SUMS.txt verified).
   `DIFFERENT_KERNEL`, `DIFFERENT_KERNEL_AND_DIMENSIONS`) and per-kernel physical
   centroid geometry; the original hash comparison is kept unchanged.
 - `slurm/psf_geometry.sbatch` also runs the star-stamp, v14 helper and P branch tests.
+  It needs about 62 min; submit with `--time=02:00:00`.
 - No observed fit, F1–F9 rerun, approval flag, Step 0 field or original data changed.
+- SLURM verification: 1458949 (geometry 21/21, star-stamp A1–A5, v14 helpers, P branch:
+  PASS), 1458867 (pilot-input tests 12/12), 1458868 (pilot inputs complete, originals
+  unchanged), 1458869 (historical P: 13 accepted-vs-source differences are
+  `RENORMALISED` at ≤4.2×10⁻¹⁷; all 68 historical kernels are +0.49 px off centre).
+- New finding, reported not changed: v12 (L-BFGS-B, production default) star fits end
+  at higher χ² than v11 on identical synthetic stars, with FWHM +1.3–3.4 % and con
+  +0.18–0.85 too high, and endpoints that differ between nodes. Job 1458866 failed on
+  the original combined centre assertion; `817955c` separates it. See
+  `reference/reviews/FRIDAY_REVIEW_RESPONSE_20261111.md`.
 
 ## Observed cache-provenance repair — 2026-11-05
 
